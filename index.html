@@ -20,7 +20,7 @@ html, body {
   width: 100%;
   overflow: hidden;
   padding: 40px 0;
-  touch-action: pan-y;
+  touch-action: pan-x; /* ⭐ 关键：允许手机横向滑动 */
 }
 
 /* ===== 滚动轨道 ===== */
@@ -32,12 +32,11 @@ html, body {
   will-change: transform;
 }
 
-/* 暂停动画 */
 .flow-track.paused {
   animation-play-state: paused;
 }
 
-/* ===== Bonus 卡 ===== */
+/* ===== Bonus 卡（竖立长） ===== */
 .bonus-card {
   width: 220px;
   height: 340px;
@@ -51,8 +50,8 @@ html, body {
   display: flex;
   flex-direction: column;
   justify-content: center;
-
   text-align: center;
+
   cursor: pointer;
 
   box-shadow:
@@ -93,6 +92,12 @@ html, body {
     width: 200px;
     height: 320px;
   }
+  .bonus-card h2 {
+    font-size: 16px;
+  }
+  .tc {
+    font-size: 12px;
+  }
 }
 </style>
 </head>
@@ -107,14 +112,12 @@ html, body {
     <div class="bonus-card"><h2>Bonus 2</h2><div class="tc">• Isi T&C</div></div>
     <div class="bonus-card"><h2>Bonus 3</h2><div class="tc">• Isi T&C</div></div>
 
-    <!-- 👉 做到 Bonus 18 -->
-
     <!-- ===== 第二组 ===== -->
     <div class="bonus-card"><h2>Bonus 1</h2><div class="tc">• Sah ahli baru<br>• Deposit RM50</div></div>
     <div class="bonus-card"><h2>Bonus 2</h2><div class="tc">• Isi T&C</div></div>
     <div class="bonus-card"><h2>Bonus 3</h2><div class="tc">• Isi T&C</div></div>
 
-    <!-- ===== 第三组（防止右边空） ===== -->
+    <!-- ===== 第三组（防止空白） ===== -->
     <div class="bonus-card"><h2>Bonus 1</h2><div class="tc">• Sah ahli baru<br>• Deposit RM50</div></div>
     <div class="bonus-card"><h2>Bonus 2</h2><div class="tc">• Isi T&C</div></div>
     <div class="bonus-card"><h2>Bonus 3</h2><div class="tc">• Isi T&C</div></div>
@@ -152,6 +155,7 @@ wrapper.addEventListener('pointerdown', e => {
 
 wrapper.addEventListener('pointermove', e => {
   if (!isDragging) return;
+  e.preventDefault(); // ⭐ 关键：阻止手机默认滚动
   const dx = e.clientX - startX;
   track.style.transition = 'none';
   track.style.transform = `translateX(${currentTranslate + dx}px)`;
