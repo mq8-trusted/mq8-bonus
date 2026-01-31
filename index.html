@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bonus Display</title>
+
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #0b0b0b;
+  font-family: Arial, sans-serif;
+  color: #f5d77a;
+  overflow-x: hidden;
+}
+
+/* ===== 展示窗口 ===== */
+.flow-wrapper {
+  width: 100%;
+  overflow: hidden;
+  padding: 40px 0;
+  touch-action: pan-y;
+}
+
+/* ===== 滚动轨道 ===== */
+.flow-track {
+  display: flex;
+  width: max-content;
+  animation: scrollRight 70s linear infinite;
+  animation-play-state: running;
+  will-change: transform;
+}
+
+/* 暂停动画 */
+.flow-track.paused {
+  animation-play-state: paused;
+}
+
+/* ===== Bonus 卡 ===== */
+.bonus-card {
+  width: 220px;
+  height: 340px;
+  margin: 0 14px;
+  background: radial-gradient(circle at top, #1a1a1a, #0f0f0f);
+  border: 2px solid #d4af37;
+  border-radius: 999px;
+  padding: 26px 18px;
+  box-sizing: border-box;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  text-align: center;
+  cursor: pointer;
+
+  box-shadow:
+    inset 0 0 18px rgba(212,175,55,0.35),
+    0 0 25px rgba(212,175,55,0.25);
+
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
+}
+
+.bonus-card.active {
+  transform: scale(1.12);
+  z-index: 10;
+  box-shadow:
+    inset 0 0 22px rgba(212,175,55,0.45),
+    0 0 35px rgba(212,175,55,0.6);
+}
+
+.bonus-card h2 {
+  margin: 0 0 14px;
+  font-size: 18px;
+}
+
+.tc {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #eee;
+}
+
+/* ===== 自动滚动动画 ===== */
+@keyframes scrollRight {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+/* ===== 手机优化 ===== */
+@media (max-width: 768px) {
+  .bonus-card {
+    width: 200px;
+    height: 320px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="flow-wrapper" id="wrapper">
+  <div class="flow-track" id="track">
+
+    <!-- ===== 第一组 ===== -->
+    <div class="bonus-card"><h2>Bonus 1</h2><div class="tc">• Sah ahli baru<br>• Deposit RM50</div></div>
+    <div class="bonus-card"><h2>Bonus 2</h2><div class="tc">• Isi T&C</div></div>
+    <div class="bonus-card"><h2>Bonus 3</h2><div class="tc">• Isi T&C</div></div>
+
+    <!-- 👉 做到 Bonus 18 -->
+
+    <!-- ===== 第二组 ===== -->
+    <div class="bonus-card"><h2>Bonus 1</h2><div class="tc">• Sah ahli baru<br>• Deposit RM50</div></div>
+    <div class="bonus-card"><h2>Bonus 2</h2><div class="tc">• Isi T&C</div></div>
+    <div class="bonus-card"><h2>Bonus 3</h2><div class="tc">• Isi T&C</div></div>
+
+    <!-- ===== 第三组（防止右边空） ===== -->
+    <div class="bonus-card"><h2>Bonus 1</h2><div class="tc">• Sah ahli baru<br>• Deposit RM50</div></div>
+    <div class="bonus-card"><h2>Bonus 2</h2><div class="tc">• Isi T&C</div></div>
+    <div class="bonus-card"><h2>Bonus 3</h2><div class="tc">• Isi T&C</div></div>
+
+  </div>
+</div>
+
+<script>
+const track = document.getElementById('track');
+const wrapper = document.getElementById('wrapper');
+const cards = document.querySelectorAll('.bonus-card');
+
+let resumeTimer = null;
+let isDragging = false;
+let startX = 0;
+let currentTranslate = 0;
+
+/* ===== 点击选中 ===== */
+cards.forEach(card => {
+  card.addEventListener('click', e => {
+    e.stopPropagation();
+    cards.forEach(c => c.classList.remove('active'));
+    card.classList.add('active');
+    track.classList.add('paused');
+    resetResumeTimer();
+  });
+});
+
+/* ===== 手动拖动（手机 + 电脑） ===== */
+wrapper.addEventListener('pointerdown', e => {
+  isDragging = true;
+  startX = e.clientX;
+  track.classList.add('paused');
+});
+
+wrapper.addEventListener('pointermove', e => {
+  if (!isDragging) return;
+  const dx = e.clientX - startX;
+  track.style.transition = 'none';
+  track.style.transform = `translateX(${currentTranslate + dx}px)`;
+});
+
+wrapper.addEventListener('pointerup', e => {
+  if (!isDragging) return;
+  isDragging = false;
+  const dx = e.clientX - startX;
+  currentTranslate += dx;
+  track.style.transition = '';
+  resetResumeTimer();
+});
+
+wrapper.addEventListener('pointerleave', () => {
+  if (isDragging) {
+    isDragging = false;
+    resetResumeTimer();
+  }
+});
+
+/* ===== 自动恢复 ===== */
+function resetResumeTimer() {
+  if (resumeTimer) clearTimeout(resumeTimer);
+  resumeTimer = setTimeout(() => {
+    cards.forEach(c => c.classList.remove('active'));
+    track.classList.remove('paused');
+    track.style.transition = '';
+    track.style.transform = '';
+    currentTranslate = 0;
+  }, 5000);
+}
+</script>
+
+</body>
+</html>
