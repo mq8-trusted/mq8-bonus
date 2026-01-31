@@ -12,18 +12,18 @@ html, body {
   background: #0b0b0b;
   font-family: Arial, sans-serif;
   color: #f5d77a;
-  overflow: hidden; /* ⭐ iOS 必须 */
+  overflow: hidden;
 }
 
-/* ===== 展示窗口 ===== */
+/* 展示窗口 */
 .flow-wrapper {
   width: 100%;
   overflow: hidden;
   padding: 40px 0;
-  touch-action: none; /* ⭐ iOS 必须：完全交给 JS */
+  touch-action: none;
 }
 
-/* ===== 滚动轨道 ===== */
+/* 滚动轨道 */
 .flow-track {
   display: flex;
   width: max-content;
@@ -31,12 +31,11 @@ html, body {
   animation-play-state: running;
   will-change: transform;
 }
-
 .flow-track.paused {
   animation-play-state: paused;
 }
 
-/* ===== Bonus 卡 ===== */
+/* Bonus 卡 */
 .bonus-card {
   width: 220px;
   height: 340px;
@@ -52,13 +51,19 @@ html, body {
   justify-content: center;
   text-align: center;
 
-  cursor: pointer;
-
   box-shadow:
     inset 0 0 18px rgba(212,175,55,0.35),
     0 0 25px rgba(212,175,55,0.25);
 
   transition: transform 0.35s ease, box-shadow 0.35s ease;
+}
+
+.bonus-card.active {
+  transform: scale(1.12);
+  z-index: 10;
+  box-shadow:
+    inset 0 0 22px rgba(212,175,55,0.45),
+    0 0 35px rgba(212,175,55,0.6);
 }
 
 .bonus-card h2 {
@@ -72,12 +77,11 @@ html, body {
   color: #eee;
 }
 
-/* ===== 自动滚动 ===== */
+/* 自动滚动动画 */
 @keyframes scrollRight {
   from { transform: translateX(0); }
   to   { transform: translateX(-50%); }
 }
-
 </style>
 </head>
 
@@ -86,7 +90,7 @@ html, body {
 <div class="flow-wrapper" id="wrapper">
   <div class="flow-track" id="track">
 
-    <!-- 三组内容，防空白 -->
+    <!-- 三组，防空白 -->
     <div class="bonus-card"><h2>Bonus 1</h2><div class="tc">• Sah ahli baru</div></div>
     <div class="bonus-card"><h2>Bonus 2</h2><div class="tc">• Isi T&C</div></div>
     <div class="bonus-card"><h2>Bonus 3</h2><div class="tc">• Isi T&C</div></div>
@@ -105,67 +109,80 @@ html, body {
 <script>
 const wrapper = document.getElementById('wrapper');
 const track = document.getElementById('track');
+const cards = document.querySelectorAll('.bonus-card');
 
 let startX = 0;
 let currentX = 0;
 let dragging = false;
+let moved = false;
+let resumeTimer = null;
 
-/* ===== iOS / Android touch ===== */
-wrapper.addEventListener('touchstart', e => {
+/* ===== Touch / Mouse Start ===== */
+function start(e) {
   dragging = true;
-  startX = e.touches[0].clientX;
+  moved = false;
+  startX = e.touches ? e.touches[0].clientX : e.clientX;
   track.classList.add('paused');
-}, { passive: false });
+}
 
-wrapper.addEventListener('touchmove', e => {
+/* ===== Move ===== */
+function move(e) {
   if (!dragging) return;
-  e.preventDefault(); // ⭐ iOS 关键
-  const x = e.touches[0].clientX;
+  const x = e.touches ? e.touches[0].clientX : e.clientX;
   const dx = x - startX;
+
+  if (Math.abs(dx) > 10) moved = true; // ⭐ 判断是否是拖动
+
   track.style.animation = 'none';
   track.style.transform = `translateX(${currentX + dx}px)`;
-}, { passive: false });
+  e.preventDefault();
+}
 
-wrapper.addEventListener('touchend', e => {
+/* ===== End ===== */
+function end(e) {
   if (!dragging) return;
   dragging = false;
-  const dx = e.changedTouches[0].clientX - startX;
-  currentX += dx;
 
-  // 5 秒后恢复自动滚动
-  setTimeout(() => {
-    track.style.animation = '';
-    track.style.transform = '';
-    currentX = 0;
-  }, 5000);
-});
+  const endX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+  const dx = endX - startX;
 
-/* ===== 电脑 mouse（兜底） ===== */
-wrapper.addEventListener('mousedown', e => {
-  dragging = true;
-  startX = e.clientX;
+  if (!moved) {
+    // 当作点击
+    const target = e.target.closest('.bonus-card');
+    if (target) selectCard(target);
+  } else {
+    currentX += dx;
+  }
+
+  resetResume();
+}
+
+/* ===== 选中 Bonus ===== */
+function selectCard(card) {
+  cards.forEach(c => c.classList.remove('active'));
+  card.classList.add('active');
   track.classList.add('paused');
-});
+}
 
-wrapper.addEventListener('mousemove', e => {
-  if (!dragging) return;
-  const dx = e.clientX - startX;
-  track.style.animation = 'none';
-  track.style.transform = `translateX(${currentX + dx}px)`;
-});
-
-wrapper.addEventListener('mouseup', e => {
-  if (!dragging) return;
-  dragging = false;
-  const dx = e.clientX - startX;
-  currentX += dx;
-
-  setTimeout(() => {
+/* ===== 自动恢复 ===== */
+function resetResume() {
+  if (resumeTimer) clearTimeout(resumeTimer);
+  resumeTimer = setTimeout(() => {
+    cards.forEach(c => c.classList.remove('active'));
     track.style.animation = '';
     track.style.transform = '';
     currentX = 0;
   }, 5000);
-});
+}
+
+/* 绑定事件 */
+wrapper.addEventListener('touchstart', start, { passive: false });
+wrapper.addEventListener('touchmove', move, { passive: false });
+wrapper.addEventListener('touchend', end);
+
+wrapper.addEventListener('mousedown', start);
+wrapper.addEventListener('mousemove', move);
+wrapper.addEventListener('mouseup', end);
 </script>
 
 </body>
