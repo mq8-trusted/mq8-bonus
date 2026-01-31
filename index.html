@@ -12,7 +12,7 @@ html, body {
   background: #0b0b0b;
   font-family: Arial, sans-serif;
   color: #f5d77a;
-  overflow-x: hidden;
+  overflow: hidden; /* ⭐ iOS 必须 */
 }
 
 /* ===== 展示窗口 ===== */
@@ -20,7 +20,7 @@ html, body {
   width: 100%;
   overflow: hidden;
   padding: 40px 0;
-  touch-action: pan-x; /* ⭐ 关键：允许手机横向滑动 */
+  touch-action: none; /* ⭐ iOS 必须：完全交给 JS */
 }
 
 /* ===== 滚动轨道 ===== */
@@ -36,7 +36,7 @@ html, body {
   animation-play-state: paused;
 }
 
-/* ===== Bonus 卡（竖立长） ===== */
+/* ===== Bonus 卡 ===== */
 .bonus-card {
   width: 220px;
   height: 340px;
@@ -61,14 +61,6 @@ html, body {
   transition: transform 0.35s ease, box-shadow 0.35s ease;
 }
 
-.bonus-card.active {
-  transform: scale(1.12);
-  z-index: 10;
-  box-shadow:
-    inset 0 0 22px rgba(212,175,55,0.45),
-    0 0 35px rgba(212,175,55,0.6);
-}
-
 .bonus-card h2 {
   margin: 0 0 14px;
   font-size: 18px;
@@ -80,25 +72,12 @@ html, body {
   color: #eee;
 }
 
-/* ===== 自动滚动动画 ===== */
+/* ===== 自动滚动 ===== */
 @keyframes scrollRight {
   from { transform: translateX(0); }
   to   { transform: translateX(-50%); }
 }
 
-/* ===== 手机优化 ===== */
-@media (max-width: 768px) {
-  .bonus-card {
-    width: 200px;
-    height: 320px;
-  }
-  .bonus-card h2 {
-    font-size: 16px;
-  }
-  .tc {
-    font-size: 12px;
-  }
-}
 </style>
 </head>
 
@@ -107,18 +86,16 @@ html, body {
 <div class="flow-wrapper" id="wrapper">
   <div class="flow-track" id="track">
 
-    <!-- ===== 第一组 ===== -->
-    <div class="bonus-card"><h2>Bonus 1</h2><div class="tc">• Sah ahli baru<br>• Deposit RM50</div></div>
+    <!-- 三组内容，防空白 -->
+    <div class="bonus-card"><h2>Bonus 1</h2><div class="tc">• Sah ahli baru</div></div>
     <div class="bonus-card"><h2>Bonus 2</h2><div class="tc">• Isi T&C</div></div>
     <div class="bonus-card"><h2>Bonus 3</h2><div class="tc">• Isi T&C</div></div>
 
-    <!-- ===== 第二组 ===== -->
-    <div class="bonus-card"><h2>Bonus 1</h2><div class="tc">• Sah ahli baru<br>• Deposit RM50</div></div>
+    <div class="bonus-card"><h2>Bonus 1</h2><div class="tc">• Sah ahli baru</div></div>
     <div class="bonus-card"><h2>Bonus 2</h2><div class="tc">• Isi T&C</div></div>
     <div class="bonus-card"><h2>Bonus 3</h2><div class="tc">• Isi T&C</div></div>
 
-    <!-- ===== 第三组（防止空白） ===== -->
-    <div class="bonus-card"><h2>Bonus 1</h2><div class="tc">• Sah ahli baru<br>• Deposit RM50</div></div>
+    <div class="bonus-card"><h2>Bonus 1</h2><div class="tc">• Sah ahli baru</div></div>
     <div class="bonus-card"><h2>Bonus 2</h2><div class="tc">• Isi T&C</div></div>
     <div class="bonus-card"><h2>Bonus 3</h2><div class="tc">• Isi T&C</div></div>
 
@@ -126,68 +103,69 @@ html, body {
 </div>
 
 <script>
-const track = document.getElementById('track');
 const wrapper = document.getElementById('wrapper');
-const cards = document.querySelectorAll('.bonus-card');
+const track = document.getElementById('track');
 
-let resumeTimer = null;
-let isDragging = false;
 let startX = 0;
-let currentTranslate = 0;
+let currentX = 0;
+let dragging = false;
 
-/* ===== 点击选中 ===== */
-cards.forEach(card => {
-  card.addEventListener('click', e => {
-    e.stopPropagation();
-    cards.forEach(c => c.classList.remove('active'));
-    card.classList.add('active');
-    track.classList.add('paused');
-    resetResumeTimer();
-  });
+/* ===== iOS / Android touch ===== */
+wrapper.addEventListener('touchstart', e => {
+  dragging = true;
+  startX = e.touches[0].clientX;
+  track.classList.add('paused');
+}, { passive: false });
+
+wrapper.addEventListener('touchmove', e => {
+  if (!dragging) return;
+  e.preventDefault(); // ⭐ iOS 关键
+  const x = e.touches[0].clientX;
+  const dx = x - startX;
+  track.style.animation = 'none';
+  track.style.transform = `translateX(${currentX + dx}px)`;
+}, { passive: false });
+
+wrapper.addEventListener('touchend', e => {
+  if (!dragging) return;
+  dragging = false;
+  const dx = e.changedTouches[0].clientX - startX;
+  currentX += dx;
+
+  // 5 秒后恢复自动滚动
+  setTimeout(() => {
+    track.style.animation = '';
+    track.style.transform = '';
+    currentX = 0;
+  }, 5000);
 });
 
-/* ===== 手动拖动（手机 + 电脑） ===== */
-wrapper.addEventListener('pointerdown', e => {
-  isDragging = true;
+/* ===== 电脑 mouse（兜底） ===== */
+wrapper.addEventListener('mousedown', e => {
+  dragging = true;
   startX = e.clientX;
   track.classList.add('paused');
 });
 
-wrapper.addEventListener('pointermove', e => {
-  if (!isDragging) return;
-  e.preventDefault(); // ⭐ 关键：阻止手机默认滚动
+wrapper.addEventListener('mousemove', e => {
+  if (!dragging) return;
   const dx = e.clientX - startX;
-  track.style.transition = 'none';
-  track.style.transform = `translateX(${currentTranslate + dx}px)`;
+  track.style.animation = 'none';
+  track.style.transform = `translateX(${currentX + dx}px)`;
 });
 
-wrapper.addEventListener('pointerup', e => {
-  if (!isDragging) return;
-  isDragging = false;
+wrapper.addEventListener('mouseup', e => {
+  if (!dragging) return;
+  dragging = false;
   const dx = e.clientX - startX;
-  currentTranslate += dx;
-  track.style.transition = '';
-  resetResumeTimer();
-});
+  currentX += dx;
 
-wrapper.addEventListener('pointerleave', () => {
-  if (isDragging) {
-    isDragging = false;
-    resetResumeTimer();
-  }
-});
-
-/* ===== 自动恢复 ===== */
-function resetResumeTimer() {
-  if (resumeTimer) clearTimeout(resumeTimer);
-  resumeTimer = setTimeout(() => {
-    cards.forEach(c => c.classList.remove('active'));
-    track.classList.remove('paused');
-    track.style.transition = '';
+  setTimeout(() => {
+    track.style.animation = '';
     track.style.transform = '';
-    currentTranslate = 0;
+    currentX = 0;
   }, 5000);
-}
+});
 </script>
 
 </body>
